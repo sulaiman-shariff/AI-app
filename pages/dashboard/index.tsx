@@ -11,6 +11,8 @@ import {
   IconSunHighFilled,
   IconLoader,
   IconSunMoon,
+  // NEW
+  IconTrash,
 } from '@tabler/icons-react';
 import { CodeHighlight } from '@mantine/code-highlight';
 import {
@@ -58,15 +60,14 @@ function FullLayout() {
   const { colorScheme, setColorScheme } = useMantineColorScheme();
 
   // ------------------------------------------------
-  // Initial state for each file
+  // Default file content (for resets)
   // ------------------------------------------------
-  const [html, setHtml] = useState<string>(`
+  const defaultHtml = `
 <p>This is rendered using dangerouslySetInnerHTML</p>
 <h1>Hello world</h1>
 <button onclick="h()">click me</button>
-  `);
-
-  const [css, setCss] = useState<string>(`
+  `;
+  const defaultCss = `
 p {
   color: green;
 }
@@ -74,16 +75,22 @@ h1 {
   font-size: 3rem;
   font-weight: 900; 
 }
-  `);
-
-  const [js, setJs] = useState<string>(`
+  `;
+  const defaultJs = `
 function h() {
   alert("workin");
 }
-  `);
+  `;
 
   // ------------------------------------------------
-  // NEW OR CHANGED: Restore from localStorage on mount
+  // Initial state for each file
+  // ------------------------------------------------
+  const [html, setHtml] = useState<string>(defaultHtml);
+  const [css, setCss] = useState<string>(defaultCss);
+  const [js, setJs] = useState<string>(defaultJs);
+
+  // ------------------------------------------------
+  // Restore from localStorage on mount
   // ------------------------------------------------
   useEffect(() => {
     const savedHtml = localStorage.getItem('savedHtml');
@@ -115,7 +122,7 @@ function h() {
   const [file, setFile] = useState<FileType>(FileType.HTML);
 
   // ------------------------------------------------
-  // Initialize Google Generative AI (same as before)
+  // Initialize Google Generative AI
   // ------------------------------------------------
   useEffect(() => {
     if (!apiKey) return;
@@ -162,14 +169,12 @@ function h() {
   }, []);
 
   // ------------------------------------------------
-  // NEW OR CHANGED: handleSave updates localStorage
+  // Save local copies
   // ------------------------------------------------
   const handleSave = () => {
-    // Also store the combined code if you want to open preview:
     const combinedCodeStr = combineCode(html, css, js);
     localStorage.setItem('previewCode', combinedCodeStr);
 
-    // Store individual files as well, so we can restore them:
     localStorage.setItem('savedHtml', html);
     localStorage.setItem('savedCss', css);
     localStorage.setItem('savedJs', js);
@@ -191,7 +196,27 @@ function h() {
   };
 
   // ------------------------------------------------
-  // Only update the currently selected file based on AI response
+  // NEW: Clear local storage and reset all file content
+  // ------------------------------------------------
+  const [clearAlert, setClearAlert] = useState<boolean>(false);
+
+  const handleClearLocalStorage = () => {
+    localStorage.removeItem('savedHtml');
+    localStorage.removeItem('savedCss');
+    localStorage.removeItem('savedJs');
+    localStorage.removeItem('previewCode');
+
+    setHtml(defaultHtml);
+    setCss(defaultCss);
+    setJs(defaultJs);
+
+    // Optional: show a small notification
+    setClearAlert(true);
+    setTimeout(() => setClearAlert(false), 1500);
+  };
+
+  // ------------------------------------------------
+  // Generate AI prompt
   // ------------------------------------------------
   const handleGenAIPrompt = useCallback(async () => {
     const userPrompt = prompt.trim();
@@ -261,7 +286,6 @@ Instructions:
         throw new Error('Invalid JSON received from AI response.');
       }
 
-      // Validate that 'code' is in the response
       if (!('code' in parsed)) {
         throw new Error("AI response JSON doesn't contain the 'code' property.");
       }
@@ -286,14 +310,20 @@ Instructions:
         setChatHistory((prev) => {
           const updated = [...prev];
           updated.pop(); // remove "Generating response..."
-          return [...updated, { role: 'bot', message: 'Code updated successfully.' }];
+          return [
+            ...updated,
+            { role: 'bot', message: 'Code updated successfully.' },
+          ];
         });
       } else {
         // code is null → no changes
         setChatHistory((prev) => {
           const updated = [...prev];
           updated.pop();
-          return [...updated, { role: 'bot', message: 'No changes were made to the code.' }];
+          return [
+            ...updated,
+            { role: 'bot', message: 'No changes were made to the code.' },
+          ];
         });
       }
     } catch (error) {
@@ -345,7 +375,9 @@ Instructions:
   };
 
   // Handler to send prompt on Enter key (without Shift)
-  const handlePromptKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handlePromptKeyDown = (
+    event: React.KeyboardEvent<HTMLTextAreaElement>
+  ) => {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       handleGenAIPrompt();
@@ -399,9 +431,21 @@ Instructions:
 
             <Button
               onClick={handlePreview}
+              variant="outline"
+              className="mr-4"
               rightSection={<IconExternalLink size={18} />}
             >
               Preview
+            </Button>
+
+            {/* NEW: Clear Local Storage button */}
+            <Button
+              onClick={handleClearLocalStorage}
+              variant="outline"
+              color="red"
+              rightSection={<IconTrash size={18} />}
+            >
+              Clear
             </Button>
           </div>
         </Group>
@@ -480,7 +524,9 @@ Instructions:
             </Button>
           </div>
         </div>
-                {opacity > 0 && (
+
+        {/* Saved file notification */}
+        {opacity > 0 && (
           <Notification
             style={{
               position: 'fixed',
@@ -495,6 +541,22 @@ Instructions:
           </Notification>
         )}
 
+        {/* NEW: Clear local storage notification */}
+        {clearAlert && (
+          <Notification
+            style={{
+              position: 'fixed',
+              bottom: '70px',
+              right: '20px',
+              zIndex: 1000,
+            }}
+            withCloseButton={false}
+            title="Storage Cleared"
+            color="red"
+          >
+            Local code files have been reset.
+          </Notification>
+        )}
       </AppShell.Aside>
     </AppShell>
   );
