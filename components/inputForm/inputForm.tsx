@@ -33,7 +33,7 @@ export function Field() {
     <Fieldset legend="Basic information">
       <TextInput withAsterisk label="Your name" placeholder="Your name" rightSection={<IconUser  size={14} />} onChange={(e)=>{setname(e.target.value)}} />
       <TextInput withAsterisk label="USN" placeholder="xxxxxxxxx" mt="md" rightSection={<IconId  size={14} />} onChange={(e)=>{setUSN(e.target.value)}} />
-      <PasswordInput withAsterisk label="API key" placeholder="Gemeini Key" mt="md" onChange={(e)=>{setApiKey(e.target.value)}} />
+      <PasswordInput withAsterisk label="API key" placeholder="Gemini Key" mt="md" onChange={(e)=>{setApiKey(e.target.value)}} />
         
         
         <Button fullWidth mt='lg' justify="center"  rightSection={<IconChevronRight size={16} />} onClick={() => {doStuff(name,USN, apiKey, router)}}>Next</Button>
